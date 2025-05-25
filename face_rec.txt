@@ -1,0 +1,53 @@
+import cv2
+import face_recognition
+import serial
+import time
+from datetime import datetime
+
+# Initialize Serial Communication
+arduino = serial.Serial('COM3', 9600)  # Replace with your Arduino port
+time.sleep(2)
+
+# Load known faces
+known_image = face_recognition.load_image_file("jayakaran.jpg")
+known_encoding = face_recognition.face_encodings(known_image)[0]
+known_names = ["Jayakaran"]
+
+# Start camera
+video_capture = cv2.VideoCapture(0)
+
+attendance_set = set()
+
+while True:
+    ret, frame = video_capture.read()
+    if not ret:
+        continue
+
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    face_locations = face_recognition.face_locations(rgb_frame)
+    encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
+    for face_encoding, face_location in zip(encodings, face_locations):
+        match = face_recognition.compare_faces([known_encoding], face_encoding)[0]
+        if match:
+            name = known_names[0]
+
+            if name not in attendance_set:
+                attendance_set.add(name)
+                now = datetime.now().strftime("%H:%M:%S")
+                print(f"{name} present at {now}")
+                
+                # Log to CSV
+                with open("attendance.csv", "a") as f:
+                    f.write(f"{name},{now}\n")
+
+                # Send to Arduino
+                arduino.write(f"{name} present at {now}\n".encode())
+
+    cv2.imshow("Face Recognition", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+video_capture.release()
+cv2.destroyAllWindows()

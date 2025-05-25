@@ -1,0 +1,29 @@
+#include <SoftwareSerial.h>
+
+SoftwareSerial gsm(7, 8); // RX, TX for GSM
+String incomingData = "";
+
+void setup() {
+  Serial.begin(9600);
+  gsm.begin(9600);
+  delay(1000);
+  gsm.println("AT"); delay(1000);
+  gsm.println("AT+CMGF=1"); // Set SMS mode to text
+  delay(1000);
+}
+
+void loop() {
+  if (Serial.available()) {
+    incomingData = Serial.readStringUntil('\n');
+    sendSMS(incomingData);
+  }
+}
+
+void sendSMS(String message) {
+  gsm.println("AT+CMGS=\"+91xxxxxxxxxx\""); // Replace with receiver number
+  delay(1000);
+  gsm.println(message);
+  delay(100);
+  gsm.write(26); // ASCII code for CTRL+Z
+  delay(2000);
+}
